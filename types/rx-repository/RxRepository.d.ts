@@ -1,11 +1,12 @@
 import { HttpClient } from "@angular/common/http";
 import { Observable } from "rxjs";
-import { RxStatusRefreshBehaviour } from "../rx-status";
+import { RxStatus, RxStatusRefreshBehaviour } from "../rx-status";
 export declare class RxRepository<T> {
     readonly http: HttpClient;
     configuration: RxRepositoryConfiguration<T>;
-    protected list(): Observable<T[]>;
     private _list$;
+    get list$(): Observable<RxStatus<T[]>>;
+    protected set list$(value: Observable<T[]> | undefined);
 }
 export declare type RxRepositoryConfiguration<T> = {
     resourceAddress: string;

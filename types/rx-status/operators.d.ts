@@ -26,9 +26,14 @@ export declare const isErrored: <T>(status: Observable<RxStatus<T>>) => Observab
  */
 export declare const hasData: <T>(status: Observable<RxStatus<T>>) => Observable<boolean | undefined>;
 /**
- * Extract the refresh function from a RxStatus
+ * Extract the RxStatus (without data embedded) from a RxStatus
  * @param status
  */
-export declare const refresh: <T>(status: Observable<RxStatus<T>>) => Observable<() => void>;
+export declare const status: <T>(status: Observable<RxStatus<T>>) => Observable<{
+    error: any;
+    isLoading: boolean | undefined;
+    isErrored: boolean | undefined;
+    hasData: boolean | undefined;
+}>;
 export declare const reload: <T>(status: Observable<RxStatus<T>>) => import("rxjs").Subscription;
 export declare const irx: <T>(refreshBehaviour?: Partial<RxStatusRefreshBehaviour>) => OperatorFunction<T, RxStatus<T>>;

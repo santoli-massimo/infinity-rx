@@ -1,7 +1,7 @@
 import {inject, InjectionToken} from "@angular/core";
 import {HttpClient} from "@angular/common/http";
 import {Observable} from "rxjs";
-import {irx, RxStatus, RxStatusRefreshBehaviour} from "../rx-status";
+import {IRx, irx, RxStatus, RxStatusRefreshBehaviour} from "../rx-status";
 
 
 // export interface IRxRepository<T>{
@@ -15,14 +15,9 @@ export class RxRepository<T>{
     readonly http: HttpClient = inject(HttpClient)
     public configuration : RxRepositoryConfiguration<T>
 
-    protected list() : Observable<T[]> { return this.http.get<T[]>(this.configuration + '/pippo') }
-
-    private _list$: Observable<RxStatus<T[]>>|undefined = undefined
-    // public get list$() : Observable<RxStatus<T[]>> {
-    //     // console.log(this._list$)
-    //     this._list$ = this._list$ || irx<T[]>(()=>this.list(), this.configuration)
-    //     return this._list$
-    // }
+    private _list$: Observable<RxStatus<T[]>>
+    public get list$() : Observable<RxStatus<T[]>> {return this._list$}
+    protected set list$(value: Observable<T[]>|undefined) { this._list$ = IRx<T[]>(value, this.configuration) }
 }
 
 export type RxRepositoryConfiguration<T> = {

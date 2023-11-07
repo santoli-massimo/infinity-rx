@@ -1,4 +1,4 @@
-import { first, merge, of, repeat, ReplaySubject, share, shareReplay, startWith, Subject, switchMap, tap, timer } from "rxjs";
+import { first, interval, mergeMap, of, repeat, ReplaySubject, share, shareReplay, startWith, Subject, tap, timer } from "rxjs";
 import { defaultRxStatus, RxStatus } from "./RxStatus";
 import { catchError, map } from "rxjs/operators";
 /**
@@ -37,36 +37,55 @@ export const hasData = (status) => {
     return status.pipe(map(status => status.hasData));
 };
 /**
- * Extract the refresh function from a RxStatus
+ * Extract the RxStatus (without data embedded) from a RxStatus
  * @param status
  */
-export const refresh = (status) => {
-    return status.pipe(map(status => status.refresh));
+export const status = (status) => {
+    return status.pipe(map(status => {
+        return {
+            error: status.error,
+            isLoading: status.isLoading,
+            isErrored: status.isErrored,
+            hasData: status.hasData,
+        };
+    }));
 };
+/**
+ * FACTORIES
+ * */
 const toLoadingStatus = (refresher) => new RxStatus({ ...defaultRxStatus, isLoading: true }, refresher);
 const toErrorStatus = (error, refresher) => new RxStatus({ ...defaultRxStatus, isErrored: true, error: error }, refresher);
 const toDataStatus = (data, refresher) => new RxStatus({ ...defaultRxStatus, data: data, hasData: true }, refresher);
 export const reload = (status) => status.pipe(first()).subscribe((status) => status.refresh());
+/**
+ * CORE
+ * */
 const toIRx = (refresher) => {
     return (source) => {
-        return source.pipe(switchMap(() => merge(refresher.pipe(map(() => toLoadingStatus(refresher))), source.pipe(map((value) => toDataStatus(value, refresher)), catchError((err) => of(toErrorStatus(err, refresher)))))));
+        return source.pipe(mergeMap(() => 
+        // merge<[RxStatus<T>, RxStatus<T>]>(
+        //     refresher.pipe(map(()=>toLoadingStatus<T>(refresher))),
+        source.pipe(map((value) => toDataStatus(value, refresher)), catchError((err) => of(toErrorStatus(err, refresher))))
+        // )
+        ));
     };
 };
 const addReloadBehaviour = (refresher) => {
-    return (source) => {
-        return source.pipe(share({
-            connector: () => new ReplaySubject(1),
-            resetOnError: true,
-            resetOnComplete: true,
-        }), repeat({ count: Infinity, delay: () => refresher }));
-    };
+    let connector = new ReplaySubject(1);
+    return (source) => source.pipe(share({
+        connector: () => new ReplaySubject(1),
+        // connector: () => connector,
+        resetOnError: true,
+        resetOnComplete: true,
+    }), repeat({ count: Infinity, delay: () => refresher }));
 };
-const addRefCountBehaviour = (refresher, refreshBehaviour = {}) => {
+const addRefCountBehaviour = (refreshBehaviour = {}) => {
     let resetTimer;
     return (source) => {
         return source.pipe(tap((status) => {
-            if (refreshBehaviour.minRefreshInterval)
-                resetTimer = timer(refreshBehaviour.minRefreshInterval).pipe(shareReplay(1));
+            resetTimer = !refreshBehaviour.minRefreshInterval
+                ? resetTimer
+                : timer(refreshBehaviour.minRefreshInterval).pipe(shareReplay(1));
         }), share({
             connector: () => new ReplaySubject(1),
             resetOnRefCountZero: refreshBehaviour.onRefCountZero
@@ -76,9 +95,9 @@ const addRefCountBehaviour = (refresher, refreshBehaviour = {}) => {
     };
 };
 export const irx = (refreshBehaviour = {}) => {
-    const refresher$ = new Subject();
-    return (source) => {
-        return source.pipe(addReloadBehaviour(refresher$), toIRx(refresher$), addRefCountBehaviour(refresher$, refreshBehaviour), startWith(toLoadingStatus(refresher$)));
-    };
+    const refresher = new Subject();
+    const refreshInterval = interval(5000).pipe(map(() => undefined));
+    // refreshInterval.subscribe(refresher)
+    return (source) => source.pipe(addReloadBehaviour(refresher), toIRx(refresher), startWith(toLoadingStatus(refresher)), addRefCountBehaviour(refreshBehaviour));
 };
 //# sourceMappingURL=operators.js.map

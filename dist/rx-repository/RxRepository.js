@@ -1,5 +1,6 @@
 import { inject, InjectionToken } from "@angular/core";
 import { HttpClient } from "@angular/common/http";
+import { IRx } from "../rx-status";
 // export interface IRxRepository<T>{
 //     list$ : T[] | unknown
 //     create$(creationData: Partial<T>): T | unknown
@@ -9,14 +10,9 @@ import { HttpClient } from "@angular/common/http";
 export class RxRepository {
     constructor() {
         this.http = inject(HttpClient);
-        this._list$ = undefined;
-        // public get list$() : Observable<RxStatus<T[]>> {
-        //     // console.log(this._list$)
-        //     this._list$ = this._list$ || irx<T[]>(()=>this.list(), this.configuration)
-        //     return this._list$
-        // }
     }
-    list() { return this.http.get(this.configuration + '/pippo'); }
+    get list$() { return this._list$; }
+    set list$(value) { this._list$ = IRx(value, this.configuration); }
 }
 // Create an InjectionToken to serve as the provider key
 const CUSTOM_INJECTABLE_TOKEN = new InjectionToken('custom_injectable_token');
