@@ -22,10 +22,31 @@ export class RxStatus<T>{
     public readonly data?: T
     public readonly error?: any
     public readonly isLoading?: boolean
+    public readonly loadingCount?: number
     public readonly isErrored?: boolean
     public readonly hasData?: boolean
     public refresh():void {this.refresh$?.next(undefined)}
 }
+
+export class RxLoadingStatus<T> extends RxStatus<T>{
+    constructor(refresh$: BehaviorSubject<undefined>|Subject<undefined> = new BehaviorSubject(undefined), loadingCount: number=0) {
+        super({...defaultRxStatus, loadingCount, isLoading: true, }, refresh$)
+    }
+}
+
+export class RxErroredStatus<T> extends RxStatus<T>{
+    constructor(refresh$: BehaviorSubject<undefined>|Subject<undefined> = new BehaviorSubject(undefined), error: any) {
+        super({...defaultRxStatus, error, isErrored: true}, refresh$)
+    }
+}
+
+export class RxDataStatus<T> extends RxStatus<T>{
+    constructor(refresh$: BehaviorSubject<undefined>|Subject<undefined> = new BehaviorSubject(undefined), data: T) {
+        super({...defaultRxStatus, data, hasData: true}, refresh$)
+    }
+}
+
+
 
 // export class IRxStatus<T>{
 //     [key: symbol]: any|T
@@ -41,8 +62,11 @@ export class RxStatus<T>{
 // }
 
 export class RxStatusRefreshBehaviour {
+    emitLoading?: boolean = true
     onRefCountZero?: boolean = false
     minRefreshInterval?: number = 0
     maxRefreshInterval?: number = 0
     everyMilliseconds?: number = 0
 }
+
+export const defaultRxStatusRefreshBehaviour = new RxStatusRefreshBehaviour()

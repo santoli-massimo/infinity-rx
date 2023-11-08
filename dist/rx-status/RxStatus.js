@@ -16,6 +16,21 @@ export class RxStatus {
     }
     refresh() { this.refresh$?.next(undefined); }
 }
+export class RxLoadingStatus extends RxStatus {
+    constructor(refresh$ = new BehaviorSubject(undefined), loadingCount = 0) {
+        super({ ...defaultRxStatus, loadingCount, isLoading: true, }, refresh$);
+    }
+}
+export class RxErroredStatus extends RxStatus {
+    constructor(refresh$ = new BehaviorSubject(undefined), error) {
+        super({ ...defaultRxStatus, error, isErrored: true }, refresh$);
+    }
+}
+export class RxDataStatus extends RxStatus {
+    constructor(refresh$ = new BehaviorSubject(undefined), data) {
+        super({ ...defaultRxStatus, data, hasData: true }, refresh$);
+    }
+}
 // export class IRxStatus<T>{
 //     [key: symbol]: any|T
 //
@@ -30,10 +45,12 @@ export class RxStatus {
 // }
 export class RxStatusRefreshBehaviour {
     constructor() {
+        this.emitLoading = true;
         this.onRefCountZero = false;
         this.minRefreshInterval = 0;
         this.maxRefreshInterval = 0;
         this.everyMilliseconds = 0;
     }
 }
+export const defaultRxStatusRefreshBehaviour = new RxStatusRefreshBehaviour();
 //# sourceMappingURL=RxStatus.js.map
