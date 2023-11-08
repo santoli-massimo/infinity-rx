@@ -1,4 +1,4 @@
-export declare type IRxSymbol = {
+export type IRxSymbol = {
     [key: string]: symbol;
 };
 export declare const symbols: {

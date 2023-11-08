@@ -14,7 +14,6 @@ import {IRx, irx, RxStatus, RxStatusRefreshBehaviour} from "../rx-status";
 export class RxRepository<T>{
     readonly http: HttpClient = inject(HttpClient)
     public configuration : RxRepositoryConfiguration<T> = {resourceAddress: ''}
-
     private _list$: Observable<RxStatus<T[]>> = new Observable<RxStatus<T[]>>()
     public get list$() : Observable<RxStatus<T[]>> {return this._list$}
     // protected set list$(value: Observable<T[]>) { this._list$ = IRx<T[]>(value, this.configuration) }

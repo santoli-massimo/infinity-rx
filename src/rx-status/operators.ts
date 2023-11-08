@@ -2,6 +2,9 @@ import {
     finalize,
     mergeWith,
     MonoTypeOperatorFunction,
+    concatMap,
+    first, interval,
+    merge, mergeMap,
     Observable,
     OperatorFunction,
     repeat,
@@ -11,6 +14,7 @@ import {
     startWith,
     Subject,
     Subscriber,
+    switchMap, takeUntil,
     tap,
     TeardownLogic,
     timer
@@ -125,7 +129,6 @@ export const irx = <T>(refreshBehaviour:Partial<RxStatusRefreshBehaviour>={}) : 
         )
     }
 }
-
 
 
 /**

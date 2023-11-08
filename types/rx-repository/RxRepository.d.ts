@@ -8,7 +8,7 @@ export declare class RxRepository<T> {
     get list$(): Observable<RxStatus<T[]>>;
     protected set list$(value: Observable<RxStatus<T[]>>);
 }
-export declare type RxRepositoryConfiguration<T> = {
+export type RxRepositoryConfiguration<T> = {
     resourceAddress: string;
 } & RxStatusRefreshBehaviour;
 export declare function customInjectableFactory(target: any): any;
