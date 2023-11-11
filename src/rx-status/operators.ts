@@ -2,9 +2,6 @@ import {
     finalize,
     mergeWith,
     MonoTypeOperatorFunction,
-    concatMap,
-    first, interval,
-    merge, mergeMap,
     Observable,
     OperatorFunction,
     repeat,
@@ -14,7 +11,6 @@ import {
     startWith,
     Subject,
     Subscriber,
-    switchMap, takeUntil,
     tap,
     TeardownLogic,
     timer
@@ -136,7 +132,7 @@ export const irx = <T>(refreshBehaviour:Partial<RxStatusRefreshBehaviour>={}) : 
  * @param status
  */
 export const value = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map(status=> status.data))
+    return status.pipe(map((status: RxStatus<T>)=> status.data))
 }
 
 /**
@@ -144,7 +140,7 @@ export const value = <T>(status: Observable<RxStatus<T>>)=>{
  * @param status
  */
 export const error = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map(status=> status.error))
+    return status.pipe(map((status: RxStatus<T>)=> status.error))
 }
 
 /**
@@ -152,7 +148,7 @@ export const error = <T>(status: Observable<RxStatus<T>>)=>{
  * @param status
  */
 export const isLoading = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map(status=> status.isLoading))
+    return status.pipe(map((status: RxStatus<T>)=> status.isLoading))
 }
 
 /**
@@ -160,7 +156,7 @@ export const isLoading = <T>(status: Observable<RxStatus<T>>)=>{
  * @param status
  */
 export const isErrored = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map(status=> status.isErrored))
+    return status.pipe(map((status: RxStatus<T>)=> status.isErrored))
 }
 
 /**
@@ -168,7 +164,7 @@ export const isErrored = <T>(status: Observable<RxStatus<T>>)=>{
  * @param status
  */
 export const hasData = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map(status=> status.hasData))
+    return status.pipe(map((status: RxStatus<T>)=> status.hasData))
 }
 
 /**
@@ -176,7 +172,7 @@ export const hasData = <T>(status: Observable<RxStatus<T>>)=>{
  * @param status
  */
 export const status = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map(status=> {
+    return status.pipe(map((status: RxStatus<T>)=> {
         return {
             error: status.error,
             isLoading: status.isLoading,

@@ -86,42 +86,42 @@ export const irx = (refreshBehaviour = {}) => {
  * @param status
  */
 export const value = (status) => {
-    return status.pipe(map(status => status.data));
+    return status.pipe(map((status) => status.data));
 };
 /**
  * Extract the error from a RxStatus
  * @param status
  */
 export const error = (status) => {
-    return status.pipe(map(status => status.error));
+    return status.pipe(map((status) => status.error));
 };
 /**
  * Extract the isLoading from a RxStatus
  * @param status
  */
 export const isLoading = (status) => {
-    return status.pipe(map(status => status.isLoading));
+    return status.pipe(map((status) => status.isLoading));
 };
 /**
  * Extract the isErrored from a RxStatus
  * @param status
  */
 export const isErrored = (status) => {
-    return status.pipe(map(status => status.isErrored));
+    return status.pipe(map((status) => status.isErrored));
 };
 /**
  * Extract the hasData from a RxStatus
  * @param status
  */
 export const hasData = (status) => {
-    return status.pipe(map(status => status.hasData));
+    return status.pipe(map((status) => status.hasData));
 };
 /**
  * Extract the RxStatus (without data embedded) from a RxStatus
  * @param status
  */
 export const status = (status) => {
-    return status.pipe(map(status => {
+    return status.pipe(map((status) => {
         return {
             error: status.error,
             isLoading: status.isLoading,
