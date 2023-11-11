@@ -4,7 +4,7 @@ This package enrich and extend the standard lifecycle of RxJS observables by int
 It's designed to simplify state management, data handling, and operational control in a reactive context.
 
 >Its core philosophy revolves around transforming any observable into an infinite one. 
-This means that even if the input observable completes, the output from rx-status remains infinite and 
+This means that even if the input observable completes, the output observable remains infinite and 
 active until there are no subscribers left.
 This feature allows for a full inversion of control over the operations embedded within the input observable, 
 forcing these operations to be executed in a full-reactive non-imperative way.
