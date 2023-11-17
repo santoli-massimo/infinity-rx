@@ -6,7 +6,8 @@ It's designed to simplify state management, data handling, and operational contr
 >Its core philosophy revolves around transforming any observable into an infinite one. 
 This means that even if the input observable completes, the output observable remains infinite and 
 active until there are no subscribers left.
-This feature allows for a full inversion of control over the operations embedded within the input observable, 
+> 
+>This feature allows for a full inversion of control over the operations embedded within the input observable, 
 forcing these operations to be executed in a full-reactive non-imperative way.
 
 It also leverages the capabilities of RxJS to provide a structured and intuitive way of handling various states of observables,
