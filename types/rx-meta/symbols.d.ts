@@ -1,1 +1,1 @@
-export declare const metaExtractor: unique symbol;
+export declare const metaExtractionToken: unique symbol;
