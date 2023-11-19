@@ -1,8 +1,7 @@
-import {combineLatest, filter, merge, Observable, OperatorFunction, share, startWith, Subject} from "rxjs";
+import {combineLatest, filter, Observable, OperatorFunction, startWith, Subject} from "rxjs";
 import {getMeta, rxMeta} from "./rx-meta";
 import {metaExtractionToken} from "./symbols";
 import {map} from "rxjs/operators";
-import {combineLatestAll} from "rxjs";
 import {MetaWithSource} from "./types";
 
 

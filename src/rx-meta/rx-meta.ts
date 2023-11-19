@@ -1,12 +1,16 @@
-import {Observable, ReplaySubject, Subject} from "rxjs";
+import {Observable, OperatorFunction, pipe, ReplaySubject, Subject, UnaryFunction} from "rxjs";
 import {metaExtractionToken} from "./symbols";
 import {RxMetaPipe} from "./types";
 
+
 export const rxMeta = <T, M>(source: Observable<T>, meta: Observable<M> = new ReplaySubject(1)): Observable<T> => {
-    source.pipe = Object.assign(
-        source.pipe,
-        {[metaExtractionToken]: meta}
-    )
+    source.pipe = (...operations: OperatorFunction<any, any>[]): Observable<T> => {
+        return rxMeta(
+            pipe(...(operations as [OperatorFunction<any, any>]))(source) as Observable<T>,
+            meta
+        )
+    }
+    Object.assign(source.pipe, {[metaExtractionToken]: meta})
     return source
 }
 

@@ -1,7 +1,10 @@
-import { ReplaySubject, Subject } from "rxjs";
+import { pipe, ReplaySubject, Subject } from "rxjs";
 import { metaExtractionToken } from "./symbols";
 export const rxMeta = (source, meta = new ReplaySubject(1)) => {
-    source.pipe = Object.assign(source.pipe, { [metaExtractionToken]: meta });
+    source.pipe = (...operations) => {
+        return rxMeta(pipe(...operations)(source), meta);
+    };
+    Object.assign(source.pipe, { [metaExtractionToken]: meta });
     return source;
 };
 export const emitMeta = (metaCarrier, status) => {
