@@ -1,4 +1,4 @@
-import {combineLatest, filter, Observable, OperatorFunction, startWith, Subject} from "rxjs";
+import {combineLatest, filter, Observable, OperatorFunction, startWith, Subject, zip} from "rxjs";
 import {getMeta, getMetaChannels, rxMeta} from "./rx-meta";
 import {map} from "rxjs/operators";
 import {MetaWithSource} from "./types";
@@ -17,28 +17,33 @@ export const withMetaFrom = <T, U>(metaCarrier: Observable<U>) : OperatorFunctio
 
 /**
  * @description
- * Create a new observable that emits the data and a channel data from the source observable
+ * ###  Create a new observable that emits the data and a channel data from the source observable
+ * emits only when both emits a new value
  * @param channelName
  * optional (default to defaultChannelName)
  */
-export const converge = (channelName: string | symbol = defaultChannelName) => {
-    return <T, M>(metaCarrier: Observable<T>) : Observable<MetaWithSource<T, M>> => {
-        let source = metaCarrier.pipe(startWith(undefined)) as Observable<T>
-        let meta = (getMeta<M>(metaCarrier, channelName) || new Subject()).pipe(startWith(undefined)) as Observable<M>
-
-        return combineLatest<[T, M]>([source, meta]).pipe(
-            filter(([data, meta]: [T|undefined, any|undefined])=>!!data || !!meta),
-            map(([data, meta]: [T|undefined, any|undefined])=>new MetaWithSource(data, meta)),
+export const converge = (channelName: string | symbol = defaultChannelName) =>
+    <T, M>(metaCarrier: Observable<T>) : Observable<MetaWithSource<T, M>> =>
+        zip([metaCarrier, getMeta<M>(metaCarrier, channelName) || new Subject<M>()]).pipe(
+            map(([data, meta]: [T, M])=>new MetaWithSource(data, meta)),
             withMetaFrom(metaCarrier)
         )
-    }
-}
 
 
-export const diverge = <T>() => {
-    return <T>(metaCarrier: Observable<MetaWithSource<T, any>>) : Observable<T> => {
-        return metaCarrier.pipe(
-            map((converged: MetaWithSource<T, any>) => converged.data as T)
-        )
-    }
-}
+/**
+ * @description
+ * ### Opposite of converge
+ * Takes a combined Observable (Observable of type MetaWithSource<Data, Meta>)
+ * and emits only the data discarding the meta/channels.
+ *
+ * Meta are preserved in the returned observable and can be accessed again with getMeta
+ */
+export const diverge = <T, M>() =>
+    /**
+     * @param metaCarrier
+     * Observable of type MetaWithSource<Data, Meta>
+     */
+    (metaCarrier: Observable<MetaWithSource<T, M>>) : Observable<T> =>
+        metaCarrier.pipe(map((converged: MetaWithSource<T, any>) => converged.data as T))
+
+
