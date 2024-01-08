@@ -1,5 +1,5 @@
 import {
-    finalize,
+    filter,
     mergeWith,
     MonoTypeOperatorFunction,
     Observable,
@@ -18,32 +18,65 @@ import {
 import {RxDataStatus, RxErroredStatus, RxLoadingStatus, RxStatus, RxStatusRefreshBehaviour} from "./RxStatus";
 import {map} from "rxjs/operators";
 import {mirror} from "../rx-utils/mirror";
-import {pif} from "../rx-utils/control-flow";
+import {when} from "../rx-utils/control-flow";
+import {getMeta, rxMeta} from "../rx-meta";
+import {loadingToken} from "./symbols";
+import {IRx} from "./IRx";
 
 
 /**
- * CORE
- * */
-const addLoadingStatus = <T>(refresher: Subject<undefined>)=>{
-    let loadingCount= 1
-    return (source: Observable<RxStatus<T>>): Observable<RxStatus<T>> => {
+ * @description
+ * Emits a RxLoadingStatus immediately when the observable is subscribed or reloaded
+ */
+export const addLoadingStatus = <T>()=>{
+    let loadingCount = 1
+    return (source: Observable<T>): Observable<T> => {
+        const status = getMeta<RxLoadingStatus>(source, 'status')
+        const reloader = getMeta<void>(source, 'reload')
         return source.pipe(
             tap(() => loadingCount++),
-            mergeWith(refresher.pipe(map(()=>new RxLoadingStatus<T>(refresher, loadingCount)))),
-            startWith(new RxLoadingStatus<T>(refresher, loadingCount)),
+            startWith(loadingToken),
+            when(!!reloader)(mergeWith(reloader!.pipe(map(()=>loadingToken)))),
+            tap(()=>status?.next(new RxLoadingStatus(loadingCount))),
+            filter((value: any)=>value !== loadingToken),
         )
     }
 }
 
 
-const reloadManually = <T>(refresher: Subject<undefined>): OperatorFunction<T, T> =>{
-    return (source: Observable<T>): Observable<T> =>{
-        return source.pipe(repeat({delay: ()=>refresher}))
+/**
+ * @description
+ * Emits a RxDataStatus when the observable emits a value
+ */
+export const addDataStatus = <T>()=>
+    (source: Observable<T>): Observable<T> => {
+        const status = getMeta<RxLoadingStatus>(source, 'status')
+        return source.pipe(tap(()=>status?.next(new RxDataStatus())),)
     }
-}
 
 
-const addRefCountBehaviour = <T>(refresher: Subject<undefined>, onRefCountZero:boolean, minRefreshInterval:number): OperatorFunction<T, T> =>{
+/**
+ * @description
+ * Repeat the observable when the reload subject emits
+ */
+export const reloadBehaviour = <T>(): OperatorFunction<T, T> =>
+    (source: Observable<T>): Observable<T> => {
+        const reloader = getMeta<void>(source, 'reload')
+        return reloader
+            ? source.pipe(repeat({delay: () => reloader}))
+            : source
+    }
+
+
+/**
+ * @description
+ * Reset the observable when the ref count is zero if onRefCountZero is true
+ * If minRefreshInterval is true, wait for the specified time before resetting the observable,
+ * this is useful to avoid too many reloads
+ * @param onRefCountZero
+ * @param minRefreshInterval
+ */
+export const addRefCountBehaviour = <T>(onRefCountZero:boolean, minRefreshInterval:number): OperatorFunction<T, T> =>{
     let resetTimer : Observable<number>
 
     return (source: Observable<T>): Observable<T> => {
@@ -65,13 +98,18 @@ const addRefCountBehaviour = <T>(refresher: Subject<undefined>, onRefCountZero:b
 }
 
 
-const toIRxStatus = <T>(refresher: Subject<undefined>): OperatorFunction<T, RxStatus<T>> => {
-    return (source: Observable<T>): Observable<RxStatus<T>> => {
-        return new Observable<RxStatus<T>>((destination: Subscriber<RxStatus<T>>) => {
+/**
+ * @description
+ * Handle error by emitting a RxErroredStatus
+ * Unsubscribe from all the subscriptions when the observable is completed
+ */
+export const toIRxStatus = <T>(): OperatorFunction<T, T> => {
+    return (source: Observable<T>): Observable<T> => {
+        return new Observable<T>((destination: Subscriber<T>) => {
             let subscription = mirror(source, destination, {
-                next: (value: T) => destination.next(new RxDataStatus<T>(refresher, value)),
+                next: (value: T) => destination.next(value),
                 error: (error: any) => {
-                    destination.next(new RxErroredStatus<T>(refresher, error))
+                    getMeta<RxStatus>(source, 'status')?.next(new RxErroredStatus(error))
                     destination.complete()
                 },
             })
@@ -81,16 +119,35 @@ const toIRxStatus = <T>(refresher: Subject<undefined>): OperatorFunction<T, RxSt
 }
 
 
-const reloadWithInterval = <T>(refresher: Subject<undefined>, maxRefreshInterval: number): MonoTypeOperatorFunction<T> =>{
+/**
+ * @description
+ * ### Reload periodically the source, only when there is at least one subscription
+ * Each source observable emission will reset the timer, also if the reload is triggered manually
+ * @param maxRefreshInterval
+ */
+export const reloadWithInterval = <T>(maxRefreshInterval: number): MonoTypeOperatorFunction<T> =>{
     let refCount= 0
+    // let intervalTimer : NodeJS.Timeout | undefined = undefined
+    // @TODO: find the right type that works in both node and browser
     let intervalTimer : NodeJS.Timeout | undefined = undefined
+    const resetInterval = (reloader: Subject<any>, currentInterval: NodeJS.Timeout) => {
+        clearInterval(currentInterval)
+        return setInterval(()=>{reloader?.next(undefined)}, maxRefreshInterval)
+    }
 
     return (source: Observable<T>): Observable<T> => {
+        const reloader = getMeta<void>(source, 'reload')
         return new Observable<T>((destination: Subscriber<T>) : TeardownLogic => {
             refCount++
-            let subscription = mirror(source, destination)
+            intervalTimer = intervalTimer || resetInterval(reloader!, intervalTimer!)
 
-            if(!intervalTimer){ intervalTimer = setInterval(()=>{refresher.next(undefined)}, maxRefreshInterval)}
+            let subscription = mirror(source, {
+                ...destination,
+                next: (value: T) => {
+                    intervalTimer = resetInterval(reloader!, intervalTimer!)
+                    destination.next(value)
+                }
+            } as Subscriber<T>)
 
             return () => {
                 refCount--
@@ -105,79 +162,10 @@ const reloadWithInterval = <T>(refresher: Subject<undefined>, maxRefreshInterval
 }
 
 
-export const irx = <T>(refreshBehaviour:Partial<RxStatusRefreshBehaviour>={}) : OperatorFunction<T, RxStatus<T>> => {
-    let emitLoading = refreshBehaviour.emitLoading || true
-    let onRefCountZero = refreshBehaviour.onRefCountZero || false
-    let minRefreshInterval = refreshBehaviour.minRefreshInterval || 0
-    let maxRefreshInterval = refreshBehaviour.maxRefreshInterval || 0
-
-    return (source: Observable<T>): Observable<RxStatus<T>> => {
-        const refresher: Subject<undefined> = new Subject()
-
-        // @TODO: handle observables that does not autocomplete by itself
-        return source.pipe(
-            toIRxStatus(refresher),
-            reloadManually(refresher),
-            pif(emitLoading)(addLoadingStatus(refresher)),
-            finalize(()=>console.log('FINALIZE')),
-            addRefCountBehaviour(refresher, onRefCountZero!, minRefreshInterval),
-            pif(maxRefreshInterval)(reloadWithInterval(refresher, maxRefreshInterval))
-        )
-    }
-}
-
-
 /**
- * Extract the data from a RxStatus
- * @param status
+ * @description
+ * Creates an IRx observable from a source observable
+ * @param refreshBehaviour
  */
-export const value = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map((status: RxStatus<T>)=> status.data))
-}
-
-/**
- * Extract the error from a RxStatus
- * @param status
- */
-export const error = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map((status: RxStatus<T>)=> status.error))
-}
-
-/**
- * Extract the isLoading from a RxStatus
- * @param status
- */
-export const isLoading = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map((status: RxStatus<T>)=> status.isLoading))
-}
-
-/**
- * Extract the isErrored from a RxStatus
- * @param status
- */
-export const isErrored = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map((status: RxStatus<T>)=> status.isErrored))
-}
-
-/**
- * Extract the hasData from a RxStatus
- * @param status
- */
-export const hasData = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map((status: RxStatus<T>)=> status.hasData))
-}
-
-/**
- * Extract the RxStatus (without data embedded) from a RxStatus
- * @param status
- */
-export const status = <T>(status: Observable<RxStatus<T>>)=>{
-    return status.pipe(map((status: RxStatus<T>)=> {
-        return {
-            error: status.error,
-            isLoading: status.isLoading,
-            isErrored: status.isErrored,
-            hasData: status.hasData,
-        }
-    }))
-}
+export const irx = <T>(refreshBehaviour:Partial<RxStatusRefreshBehaviour>={}) : OperatorFunction<T, T> =>
+    (source: Observable<T>): Observable<T> =>  IRx(source, refreshBehaviour)

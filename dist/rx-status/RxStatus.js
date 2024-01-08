@@ -1,56 +1,62 @@
-import { BehaviorSubject } from "rxjs";
-// import {symbols} from "./symbols";
-export const defaultRxStatus = {
-    data: undefined,
-    error: undefined,
-    isLoading: false,
-    isErrored: false,
-    hasData: false,
-    refresh$: undefined
-};
 // Class containing the status of an Observable along with his value
 export class RxStatus {
-    constructor(status = defaultRxStatus, refresh$ = new BehaviorSubject(undefined)) {
+    constructor(status = {}) {
+        this.error = undefined;
+        this.isLoading = false;
+        this.loadingCount = 0;
+        this.isErrored = false;
+        this.hasData = false;
         Object.assign(this, { ...status });
-        this.refresh$ = refresh$;
     }
-    refresh() { this.refresh$?.next(undefined); }
 }
 export class RxLoadingStatus extends RxStatus {
-    constructor(refresh$ = new BehaviorSubject(undefined), loadingCount = 0) {
-        super({ ...defaultRxStatus, loadingCount, isLoading: true, }, refresh$);
+    constructor(loadingCount = 0) {
+        super({ loadingCount, isLoading: true });
     }
 }
 export class RxErroredStatus extends RxStatus {
-    constructor(refresh$ = new BehaviorSubject(undefined), error) {
-        super({ ...defaultRxStatus, error, isErrored: true }, refresh$);
+    constructor(error) {
+        super({ error, isErrored: true });
     }
 }
 export class RxDataStatus extends RxStatus {
-    constructor(refresh$ = new BehaviorSubject(undefined), data) {
-        super({ ...defaultRxStatus, data, hasData: true }, refresh$);
+    constructor() {
+        super({ hasData: true, isLoading: false });
     }
 }
-// export class IRxStatus<T>{
-//     [key: symbol]: any|T
-//
-//     constructor(status: Partial<RxStatus<T>> = {}, refresh$: BehaviorSubject<undefined> = new BehaviorSubject(undefined)) {
-//         this[symbols['value']] = status.data
-//         this[symbols['error']] = status.error
-//         this[symbols['isLoading']] = status.isLoading
-//         this[symbols['isErrored']] = status.isErrored
-//         this[symbols['hasData']] = status.hasData
-//         this[symbols['refresh']] = refresh$
-//     }
-// }
 export class RxStatusRefreshBehaviour {
-    constructor() {
+    constructor(behaviour = {}) {
+        /**
+         * ### Enables the emission of a loading status
+         * Emit a loading status immediately after subscription and after each reload
+         * @default: true
+         */
         this.emitLoading = true;
-        this.onRefCountZero = false;
+        /**
+         * ### Enable the reload of the source when all the subscriptions are disposed
+         * Reload the source on re-subscription (when all the previous subscriptions have been disposed)
+         * @default: true
+         */
+        this.onRefCountZero = true;
+        /**
+         * ### Modify the onRefCountZero behaviour to postpone the reload of a certain amount of time after re-subscription
+         * Value in milliseconds,
+         * ignored if onRefCountZero is false,
+         * 0 to disable
+         * @default: 0 (the reload is immediate)
+         */
         this.minRefreshInterval = 0;
+        /**
+         * ### Reload periodically the source, only when there is at least one subscription
+         * Each source observable emission will reset the timer, also if the reload is triggered manually
+         *
+         * Value in milliseconds,
+         * 0 to disable
+         * @default: 0 (disabled)
+         */
         this.maxRefreshInterval = 0;
         this.everyMilliseconds = 0;
+        Object.assign(this, behaviour);
     }
 }
-export const defaultRxStatusRefreshBehaviour = new RxStatusRefreshBehaviour();
 //# sourceMappingURL=RxStatus.js.map

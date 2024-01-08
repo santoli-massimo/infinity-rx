@@ -1,7 +1,8 @@
 import { Observable, Subject } from "rxjs";
-export declare type RxChannelsLiteral = {
+export type RxChannelsLiteral = {
     [key: string | symbol]: Subject<any>;
 };
+export type rxChannelsSource = RxChannels | RxChannelsLiteral | Array<string | symbol>;
 /**
  * @description
  * A map of channels. Channels are used to emit meta data to a specific channel.
@@ -19,11 +20,11 @@ export declare class RxChannels extends Map<string | symbol, Subject<any>> {
     * @param source
     * @param channels
     */
-export declare const rxMeta: <T, M>(source: Observable<T>, channels?: RxChannels | RxChannelsLiteral | Array<string | symbol>) => Observable<any>;
+export declare const rxMeta: <T, M>(source: Observable<T>, channels?: rxChannelsSource) => Observable<any>;
 /**
  * @description
  *  Emits meta data to a specific channel.
- *  The default channel is always used when no channel is specified.
+ *  The default channel is always used when no channel is provided.
  *
  * @param metaCarrier
  * @param status
@@ -33,12 +34,12 @@ export declare const emitMeta: <T>(metaCarrier: Observable<T>, status: any, chan
 /**
  * @description
  * Gets meta data from a specific channel.
- * The default channel is always used when no channel is specified.
+ * The default channel is always used when no channel is provided.
  * Returns undefined if no meta data is found.
  * @param metaCarrier
  * @param channelKey
  */
-export declare const getMeta: <T>(metaCarrier: Observable<T>, channelKey?: any) => Subject<any>;
+export declare const getMeta: <T>(metaCarrier: Observable<any>, channelKey?: any) => Subject<T> | undefined;
 /**
  * @description
  * Gets all channels from an observable.

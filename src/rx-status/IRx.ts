@@ -1,8 +1,26 @@
-import {first, Observable} from "rxjs";
+import {Observable, ReplaySubject, Subject} from "rxjs";
 import {RxStatus, RxStatusRefreshBehaviour} from "./RxStatus";
-import {irx} from "./operators";
+import {getMeta, rxMeta} from "../rx-meta";
+import {when} from "../rx-utils/control-flow";
+import {addDataStatus, addLoadingStatus, addRefCountBehaviour, reloadBehaviour, toIRxStatus, reloadWithInterval} from "./operators";
 
-export const IRx = <T>(source: Observable<T>, refreshBehaviour:Partial<RxStatusRefreshBehaviour>={}) : Observable<RxStatus<T>> => source.pipe(irx(refreshBehaviour))
 
-export const reload = <T>(status: Observable<RxStatus<T>>)=> status.pipe(first()).subscribe((status: RxStatus<T>)=>status.refresh())
+export const IRx = <T>(source: Observable<T>, refreshBehaviour:Partial<RxStatusRefreshBehaviour>={}) : Observable<T> => {
+    const {emitLoading, onRefCountZero, minRefreshInterval, maxRefreshInterval} = new RxStatusRefreshBehaviour(refreshBehaviour)
+    return rxMeta(source, {
+        reload: new Subject<void>(),
+        status: new ReplaySubject<RxStatus>(1)
+    })
+    .pipe(
+        toIRxStatus(),
+        reloadBehaviour(),
+        when(emitLoading)(addLoadingStatus()),
+        addDataStatus(),
+        addRefCountBehaviour(onRefCountZero!, minRefreshInterval),
+        when(maxRefreshInterval)(reloadWithInterval(maxRefreshInterval))
+    )
+}
+
+
+export const reload = (status: Observable<any>) : void =>getMeta<void>(status, 'reload')?.next()
 

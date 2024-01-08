@@ -4,6 +4,7 @@ import {RxMetaPipe} from "./types";
 
 
 export type RxChannelsLiteral = {[key: string|symbol]: Subject<any>}
+export type rxChannelsSource = RxChannels | RxChannelsLiteral | Array<string|symbol>
 
 /**
  * @description
@@ -38,12 +39,15 @@ export class RxChannels extends Map<string|symbol, Subject<any>> {
     */
 export const rxMeta = <T, M>(
     source: Observable<T>,
-    channels?: RxChannels | RxChannelsLiteral | Array<string|symbol>
+    channels?: rxChannelsSource
 ): Observable<any> => {
     channels = RxChannels.from(channels)
 
     // Add channels to the observable
     source.pipe = (...operations: OperatorFunction<any, any>[]): Observable<any> => {
+        operations = operationsWithMeta(operations, channels)
+        // console.log('operations', operations.map((op: OperatorFunction<any, any>) => op.name))
+
         return rxMeta(
             pipe(...(operations as [OperatorFunction<any, any>]))(source),
             channels
@@ -57,7 +61,7 @@ export const rxMeta = <T, M>(
 /**
  * @description
  *  Emits meta data to a specific channel.
- *  The default channel is always used when no channel is specified.
+ *  The default channel is always used when no channel is provided.
  *
  * @param metaCarrier
  * @param status
@@ -65,20 +69,20 @@ export const rxMeta = <T, M>(
  */
 export const emitMeta = <T>(metaCarrier: Observable<T>, status: any, channelKey: any = defaultChannelName): void => {
     // console.log(`Emit meta ${channelKey.toString()}`, getMeta(metaCarrier, channelKey))
-    getMeta(metaCarrier, channelKey).next(status)
+    getMeta(metaCarrier, channelKey)?.next(status)
 }
 
 /**
  * @description
  * Gets meta data from a specific channel.
- * The default channel is always used when no channel is specified.
+ * The default channel is always used when no channel is provided.
  * Returns undefined if no meta data is found.
  * @param metaCarrier
  * @param channelKey
  */
-export const getMeta = <T>(metaCarrier: Observable<T>, channelKey: any = defaultChannelName) : Subject<any> =>{
+export const getMeta = <T>(metaCarrier: Observable<any>, channelKey: any = defaultChannelName) : Subject<T>|undefined =>{
     // console.log(`Get meta ${channelKey.toString()}`, metaCarrier, channelKey)
-    return getMetaChannels(metaCarrier)?.get(channelKey) || new Subject()
+    return getMetaChannels(metaCarrier)?.get(channelKey)
 }
 
 /**
@@ -89,6 +93,18 @@ export const getMeta = <T>(metaCarrier: Observable<T>, channelKey: any = default
  */
 export const getMetaChannels = <T>(metaCarrier: Observable<T>) : RxChannels|undefined =>{
     return (metaCarrier.pipe as RxMetaPipe)[metaExtractionToken] || undefined
+}
+
+/**
+ * @description
+ * Adds an operator that persist meta/channels after each existing operator to make metaChannels available
+ * to the next operator even if it's a custom operator that does not use pipe internally.
+ * @param operators
+ * @param channels
+ */
+const operationsWithMeta = <T>(operators: OperatorFunction<any, any>[], channels: rxChannelsSource=[]) : OperatorFunction<any, any>[] => {
+    const propagateMeta = (source: Observable<T>) : Observable<T> => rxMeta(source, channels)
+    return operators.reduce((acc: OperatorFunction<any, any>[], operator: OperatorFunction<any, any>) => [...acc, operator, propagateMeta], [])
 }
 
 

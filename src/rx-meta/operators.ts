@@ -2,24 +2,35 @@ import {combineLatest, filter, Observable, OperatorFunction, startWith, Subject}
 import {getMeta, getMetaChannels, rxMeta} from "./rx-meta";
 import {map} from "rxjs/operators";
 import {MetaWithSource} from "./types";
+import {defaultChannelName} from "./symbols";
 
 
-// @TODO: doesnt work: emitted value is a subject
+/**
+ * @description
+ * Adds channels from another observable(metaCarrier) to the source observable
+ * @param metaCarrier
+ */
 export const withMetaFrom = <T, U>(metaCarrier: Observable<U>) : OperatorFunction<T, T> => {
-    return <T>(source: Observable<T>) => rxMeta(source, getMetaChannels(metaCarrier))
+    return (source: Observable<T>) => rxMeta(source, getMetaChannels(metaCarrier))
 }
 
-export const converge = <T>() => {
-    return <T>(metaCarrier: Observable<T>) : Observable<MetaWithSource<T, any>> => {
-        let source = metaCarrier.pipe(startWith(undefined))
-        let meta = (getMeta(metaCarrier) || new Subject()).pipe(startWith(undefined))
 
-        return combineLatest([source, meta]).pipe(
+/**
+ * @description
+ * Create a new observable that emits the data and a channel data from the source observable
+ * @param channelName
+ * optional (default to defaultChannelName)
+ */
+export const converge = (channelName: string | symbol = defaultChannelName) => {
+    return <T, M>(metaCarrier: Observable<T>) : Observable<MetaWithSource<T, M>> => {
+        let source = metaCarrier.pipe(startWith(undefined)) as Observable<T>
+        let meta = (getMeta<M>(metaCarrier, channelName) || new Subject()).pipe(startWith(undefined)) as Observable<M>
+
+        return combineLatest<[T, M]>([source, meta]).pipe(
             filter(([data, meta]: [T|undefined, any|undefined])=>!!data || !!meta),
             map(([data, meta]: [T|undefined, any|undefined])=>new MetaWithSource(data, meta)),
             withMetaFrom(metaCarrier)
         )
-
     }
 }
 
