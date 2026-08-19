@@ -11,20 +11,20 @@ export class RxStatus{
 }
 
 export class RxLoadingStatus extends RxStatus{
-    constructor(loadingCount: number=0) {
-        super({loadingCount, isLoading: true})
+    constructor(loadingCount: number=0, extras: Partial<RxStatus> = {}) {
+        super({...extras, loadingCount, isLoading: true,})
     }
 }
 
 export class RxErroredStatus extends RxStatus{
-    constructor(error: any) {
-        super({error, isErrored: true})
+    constructor(error: any, extras: Partial<RxStatus> = {}) {
+        super({...extras, error, isErrored: true})
     }
 }
 
 export class RxDataStatus extends RxStatus{
-    constructor() {
-        super({hasData: true, isLoading: false})
+    constructor(extras: Partial<RxStatus> = {}) {
+        super({...extras, hasData: true, isLoading: false})
     }
 }
 

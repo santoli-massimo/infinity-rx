@@ -6,6 +6,10 @@ import {RxMetaPipe} from "./types";
 export type RxChannelsLiteral = {[key: string|symbol]: Subject<any>}
 export type rxChannelsSource = RxChannels | RxChannelsLiteral | Array<string|symbol>
 
+
+
+
+
 /**
  * @description
  * A map of channels. Channels are used to emit meta data to a specific channel.
@@ -21,11 +25,15 @@ export class RxChannels extends Map<string|symbol, Subject<any>> {
         return new RxChannels(channels.map((key: string|symbol) => [key, new Subject()]))
     }
 
-    static from(channels?: RxChannels | RxChannelsLiteral | Array<string | symbol>): RxChannels {
-        if (!channels) return new RxChannels([[defaultChannelName, new Subject()]])
+    static from<M>(channels?: RxChannels | RxChannelsLiteral | Array<string | symbol>): RxChannels {
+        if (!channels) return new RxChannels([[defaultChannelName, new Subject<M>()]])
         else if (channels instanceof Array) return RxChannels.fromArray([...channels, defaultChannelName])
         else if (!(channels instanceof RxChannels)) return RxChannels.fromLiteral(channels)
         else return channels
+    }
+
+    static toHistory(channels: RxChannels): Map<string|symbol, any>{
+        return new Map([...channels.entries()].map(([key, subject]) => [key, null]))
     }
 }
 
@@ -39,21 +47,22 @@ export class RxChannels extends Map<string|symbol, Subject<any>> {
     */
 export const rxMeta = <T, M>(
     source: Observable<T>,
-    channels?: rxChannelsSource
+    channels?: rxChannelsSource | Subject<M>
 ): Observable<any> => {
-    channels = RxChannels.from(channels)
+    const rxChannels = RxChannels.from<M>(
+        channels instanceof Subject ? {[defaultChannelName]: channels} : channels
+    )
 
     // Add channels to the observable
     source.pipe = (...operations: OperatorFunction<any, any>[]): Observable<any> => {
-        operations = operationsWithMeta(operations, channels)
-        // console.log('operations', operations.map((op: OperatorFunction<any, any>) => op.name))
-
+        operations = operationsWithMeta(operations, rxChannels)
         return rxMeta(
             pipe(...(operations as [OperatorFunction<any, any>]))(source),
-            channels
+            rxChannels
         )
     }
-    Object.assign(source.pipe, {[metaExtractionToken]: channels})
+    Object.assign(source.pipe, {[metaExtractionToken]: rxChannels})
+
     // Return the observable
     return source
 }
@@ -68,7 +77,6 @@ export const rxMeta = <T, M>(
  * @param channelKey
  */
 export const emitMeta = <T>(metaCarrier: Observable<T>, status: any, channelKey: any = defaultChannelName): void => {
-    // console.log(`Emit meta ${channelKey.toString()}`, getMeta(metaCarrier, channelKey))
     getMeta(metaCarrier, channelKey)?.next(status)
 }
 
@@ -81,7 +89,6 @@ export const emitMeta = <T>(metaCarrier: Observable<T>, status: any, channelKey:
  * @param channelKey
  */
 export const getMeta = <T>(metaCarrier: Observable<any>, channelKey: any = defaultChannelName) : Subject<T>|undefined =>{
-    // console.log(`Get meta ${channelKey.toString()}`, metaCarrier, channelKey)
     return getMetaChannels(metaCarrier)?.get(channelKey)
 }
 

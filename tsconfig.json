@@ -20,7 +20,8 @@
     "moduleResolution": "node",
     "importHelpers": true,
     "useDefineForClassFields": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "esModuleInterop" : true,
   },
   "include": ["src/**/*"]
 }

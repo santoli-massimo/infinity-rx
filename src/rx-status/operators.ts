@@ -31,13 +31,13 @@ import {IRx} from "./IRx";
 export const addLoadingStatus = <T>()=>{
     let loadingCount = 1
     return (source: Observable<T>): Observable<T> => {
-        const status = getMeta<RxLoadingStatus>(source, 'status')
-        const reloader = getMeta<void>(source, 'reload')
+        const status$ = getMeta<RxLoadingStatus>(source, 'status')
+        const reloader$ = getMeta<void>(source, 'reload')
         return source.pipe(
             tap(() => loadingCount++),
             startWith(loadingToken),
-            when(!!reloader)(mergeWith(reloader!.pipe(map(()=>loadingToken)))),
-            tap(()=>status?.next(new RxLoadingStatus(loadingCount))),
+            when(!!reloader$)(mergeWith(reloader$!.pipe(map(()=>loadingToken)))),
+            tap(()=>status$?.next(new RxLoadingStatus(loadingCount))),
             filter((value: any)=>value !== loadingToken),
         )
     }
@@ -50,8 +50,8 @@ export const addLoadingStatus = <T>()=>{
  */
 export const addDataStatus = <T>()=>
     (source: Observable<T>): Observable<T> => {
-        const status = getMeta<RxLoadingStatus>(source, 'status')
-        return source.pipe(tap(()=>status?.next(new RxDataStatus())),)
+        const status$ = getMeta<RxLoadingStatus>(source, 'status')
+        return source.pipe(tap(()=>status$?.next(new RxDataStatus())),)
     }
 
 
@@ -61,9 +61,9 @@ export const addDataStatus = <T>()=>
  */
 export const reloadBehaviour = <T>(): OperatorFunction<T, T> =>
     (source: Observable<T>): Observable<T> => {
-        const reloader = getMeta<void>(source, 'reload')
-        return reloader
-            ? source.pipe(repeat({delay: () => reloader}))
+        const reloader$ = getMeta<void>(source, 'reload')
+        return reloader$
+            ? source.pipe(repeat({delay: () => reloader$}))
             : source
     }
 
@@ -87,10 +87,7 @@ export const addRefCountBehaviour = <T>(onRefCountZero:boolean, minRefreshInterv
             share<T>({
                 connector: () => new ReplaySubject<T>(1),
                 resetOnRefCountZero: onRefCountZero
-                    ? ()=>{
-                        console.log('Ref count zero')
-                        return resetTimer || timer(0)
-                    }
+                    ? ()=> resetTimer || timer(0)
                     : false
             })
         )

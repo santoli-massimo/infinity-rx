@@ -1,4 +1,8 @@
-
-
-
 node_modules
+dist/
+types/
+src/**/*.js
+src/**/*.js.map
+index.js
+index.js.map
+.DS_Store
